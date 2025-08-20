@@ -1,0 +1,21 @@
+{
+  "name": "myapp-devops-starter",
+  "version": "1.0.0",
+  "description": "Starter Node.js app with CI/CD (GitHub Actions + CircleCI), Docker, Kubernetes, Datadog & Bugsnag hooks.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "echo \"No tests yet\" && exit 0",
+    "lint": "echo \"Add ESLint if needed\" && exit 0",
+    "build": "echo \"No build step for basic Node app\" && exit 0"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@bugsnag/js": "^7.24.3",
+    "dd-trace": "^4.31.0",
+    "express": "^4.19.2",
+    "morgan": "^1.10.0"
+  }
+}
