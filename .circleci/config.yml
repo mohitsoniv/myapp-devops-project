@@ -1,0 +1,74 @@
+version: 2.1
+orbs:
+  node: circleci/node@5.2.0
+  docker: circleci/docker@2.6.0
+
+jobs:
+  build:
+    docker:
+      - image: cimg/node:18.20
+    steps:
+      - checkout
+      - node/install-packages:
+          pkg-manager: npm
+          cache-path: ~/project/node_modules
+          app-dir: .
+          override-ci-command: npm ci
+      - run: npm test
+
+  docker_build_and_push:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Docker login
+          command: |
+            echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - run:
+          name: Build + Push
+          command: |
+            IMAGE="${DOCKERHUB_USERNAME}/myapp-devops-starter"
+            docker build -t "$IMAGE:$CIRCLE_SHA1" -t "$IMAGE:latest" .
+            docker push "$IMAGE:$CIRCLE_SHA1"
+            docker push "$IMAGE:latest"
+
+  deploy:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - checkout
+      - run:
+          name: Write kubeconfig
+          command: |
+            if [ -z "$KUBECONFIG_B64" ]; then
+              echo "KUBECONFIG_B64 not set; skipping deploy"; exit 0;
+            fi
+            mkdir -p ~/.kube
+            echo "$KUBECONFIG_B64" | base64 -d > ~/.kube/config
+      - run:
+          name: Rollout
+          command: |
+            if [ -z "$KUBECONFIG_B64" ]; then
+              echo "Skipping deploy"; exit 0;
+            fi
+            IMAGE="${DOCKERHUB_USERNAME}/myapp-devops-starter"
+            kubectl create ns myapp --dry-run=client -o yaml | kubectl apply -f -
+            kubectl -n myapp set image deployment/myapp-deployment myapp="$IMAGE:$CIRCLE_SHA1" || true
+            kubectl -n myapp apply -f k8s/
+
+workflows:
+  version: 2
+  build_test_push_deploy:
+    jobs:
+      - build
+      - docker_build_and_push:
+          requires:
+            - build
+      - deploy:
+          requires:
+            - docker_build_and_push
+          filters:
+            branches:
+              only: main
