@@ -1,13 +1,7 @@
-  apiVersion: v1
-  kind: Namespace
-  metadata:
-    name: myapp
----
   apiVersion: apps/v1
   kind: Deployment
   metadata:
     name: myapp-deployment
-    namespace: myapp
   spec:
     replicas: 2
     selector:
@@ -19,37 +13,34 @@
           app: myapp
       spec:
         containers:
-          - name: myapp
-            image: DOCKERHUB_USERNAME/myapp-devops-starter:latest
-            imagePullPolicy: IfNotPresent
-            ports:
-              - containerPort: 3000
-            env:
-              - name: NODE_ENV
-                value: "production"
-              - name: BUGSNAG_API_KEY
-                valueFrom:
-                  secretKeyRef:
-                    name: myapp-secrets
-                    key: BUGSNAG_API_KEY
-            resources:
-              requests:
-                cpu: "100m"
-                memory: "128Mi"
-              limits:
-                cpu: "500m"
-                memory: "256Mi"
-        imagePullSecrets: []
+        - name: myapp
+          image: mohitsoniv/myapp-devops-starter:latest
+          ports:
+          - containerPort: 3000
+          env:
+          - name: NODE_ENV
+            value: "production"
+          - name: DD_SERVICE
+            value: "myapp"
+          - name: DD_ENV
+            value: "prod"
+          - name: DD_VERSION
+            value: "1.0.0"
+          - name: BUGSNAG_API_KEY
+            valueFrom:
+              secretKeyRef:
+                name: myapp-secrets
+                key: BUGSNAG_API_KEY
 ---
   apiVersion: v1
   kind: Service
   metadata:
     name: myapp-service
-    namespace: myapp
   spec:
     selector:
       app: myapp
     ports:
-      - port: 80
+      - protocol: TCP
+        port: 80
         targetPort: 3000
     type: LoadBalancer
