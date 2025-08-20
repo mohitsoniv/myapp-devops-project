@@ -1,4 +1,4 @@
-# myapp-devops-starter
+# myapp-devops-project
 
 A ready-to-run demo app for DevOps workflows:
 - CI/CD with **GitHub Actions** & **CircleCI**
