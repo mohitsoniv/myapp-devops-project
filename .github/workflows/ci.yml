@@ -2,84 +2,28 @@ name: CI/CD
 
 on:
   push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
-
-env:
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/myapp-devops-starter
+    branches: [ "master" ]
 
 jobs:
-  build-test:
+  build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      - name: Install deps
-        run: npm ci
+      - name: Install dependencies
+        run: npm install
 
-      - name: Lint
-        run: npm run lint
+      - name: Build Docker image
+        run: docker build -t mohitsoniv/myapp-devops-starter:latest .
 
-      - name: Test
-        run: npm test
+      - name: Log in to DockerHub
+        run: echo "dckr_pat_xzIQRVqKp60J1bwZYQIbR4dCnv0" | docker login -u "mohitsoniv" --password-stdin
 
-  docker-push:
-    needs: build-test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Login to DockerHub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Setup Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ${{ env.IMAGE_NAME }}:latest
-
-  # Optional deploy job using a kubeconfig stored as a secret (base64-encoded)
-  deploy:
-    if: ${{ github.ref == 'refs/heads/main' }}
-    needs: docker-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
-        with:
-          version: 'v1.30.0'
-
-      - name: Write kubeconfig from secret
-        run: |
-          if [ -z "${{ secrets.KUBECONFIG_B64 }}" ]; then
-            echo "KUBECONFIG_B64 not set; skipping deploy"; exit 0;
-          fi
-          echo "${{ secrets.KUBECONFIG_B64 }}" | base64 -d > $HOME/.kube/config
-
-      - name: Update image in deployment
-        run: |
-          if [ -z "${{ secrets.KUBECONFIG_B64 }}" ]; then
-            echo "Skipping deploy"; exit 0;
-          fi
-          kubectl set image deployment/myapp-deployment myapp=${{ env.IMAGE_NAME }}:${{ github.sha }} -n myapp || true
-          kubectl apply -n myapp -f k8s/
+      - name: Push image
+        run: docker push mohitsoniv/myapp-devops-starter:latest
