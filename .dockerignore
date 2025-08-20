@@ -1,7 +1,5 @@
 node_modules
 npm-debug.log
 .git
-.github
-.circleci
 .DS_Store
 .env
